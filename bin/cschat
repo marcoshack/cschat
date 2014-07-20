@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'pry'
+
+CSCHAT_DIR = File.absolute_path(File.join(File.dirname(File.absolute_path(__FILE__)), '../'))
+$: << File.join(CSCHAT_DIR, 'lib')
+require 'cschat'
+
+class Logger
+  def process_message(category, text)
+    puts "category: #{category}, text: \"#{text}\", action: #{@action ? @action.class : "<nil>"}"
+  end
+end
+
+class MessageListener < Logger
+  def initialize(action = nil)
+    @action = action
+  end
+
+  def process_message(category, text)
+    super(category, text)
+  end
+end
+
+data = []
+YAML.load(File.read('./data/dictionary.yml')).each do |cat_sym, phrases|
+  phrases.each { |phrase| data << [ cat_sym, phrase ] }
+end
+
+c = Cschat::MessageClassifier.new data
+
+c.listener MessageListener.new(Cschat::Action::OrderStatus.new), :status
+c.listener Logger.new
+
+c.classify ARGV[0]
